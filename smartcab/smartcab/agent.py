@@ -1,5 +1,6 @@
 import random
 import math
+import numpy as np
 from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
@@ -39,6 +40,14 @@ class LearningAgent(Agent):
         # Update epsilon using a decay function of your choice
         # Update additional class parameters as needed
         # If 'testing' is True, set epsilon and alpha to 0
+        
+        if testing:
+            self.epsilon = 0
+            self.alpha = 0
+
+        else:
+            self.epsilon -= .005
+        
 
         return None
 
@@ -63,12 +72,8 @@ class LearningAgent(Agent):
         # notes:
         # waypoint is where we should be heading
         # inputs is the visual data, ex: {'light': 'green', 'oncoming': None, 'right': 'forward', 'left': 'forward'}
-        # deadline represents the fact that we have a finite number of moves
-                
-        # pick up here
-        state = (inputs, deadline)
-        if state not in self.Q:
-            self.Q[state] = ...
+        
+        state = (waypoint, inputs['light'], inputs['right'], inputs['oncoming'], inputs['left'])
 
         return state
 
@@ -82,7 +87,7 @@ class LearningAgent(Agent):
         ###########
         # Calculate the maximum Q-value of all actions for a given state
 
-        maxQ = None
+        maxQ = max(self.Q[state].values())
 
         return maxQ 
 
@@ -97,6 +102,9 @@ class LearningAgent(Agent):
         # If it is not, create a new dictionary for that state
         #   Then, for each action available, set the initial Q-value to 0.0
 
+        if self.learning and state not in self.Q:
+            self.Q[state] = {action: 0.0 for action in Environment.valid_actions}
+        
         return
 
 
@@ -117,7 +125,14 @@ class LearningAgent(Agent):
         #   Otherwise, choose an action with the highest Q-value for the current state
  
         if not self.learning:
-            action = random.choice(Environment.valid_actions[1:])
+            action = random.choice(self.valid_actions)
+        
+        else:
+            action = np.random.choice([
+                    random.choice(self.valid_actions), 
+                    max(self.Q[state], key=self.Q[state].get)], 
+                    p=[self.epsilon, 1- self.epsilon]
+                    )
 
         return action
 
@@ -133,6 +148,9 @@ class LearningAgent(Agent):
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
 
+        if self.learning:
+            self.Q[state][action] += self.alpha*reward
+     
         return
 
 
@@ -160,7 +178,7 @@ def run():
     #   verbose     - set to True to display additional output from the simulation
     #   num_dummies - discrete number of dummy agents in the environment, default is 100
     #   grid_size   - discrete number of intersections (columns, rows), default is (8, 6)
-    env = Environment()
+    env = Environment(verbose=False)
     
     ##############
     # Create the driving agent
@@ -183,7 +201,7 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env, update_delay=0.01, log_metrics=True, display=True)
+    sim = Simulator(env, update_delay=0.001, log_metrics=True, display=False)
     
     ##############
     # Run the simulator
