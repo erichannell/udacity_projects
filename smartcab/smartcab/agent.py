@@ -19,6 +19,7 @@ class LearningAgent(Agent):
         self.Q = dict()          # Create a Q-table which will be a dictionary of tuples
         self.epsilon = epsilon   # Random exploration factor
         self.alpha = alpha       # Learning factor
+        self.trial = 1
 
         ###########
         ## TO DO ##
@@ -46,7 +47,9 @@ class LearningAgent(Agent):
             self.alpha = 0
 
         else:
-            self.epsilon -= .005
+            #self.epsilon -= 0.005
+            self.epsilon = 1/math.sqrt(self.trial)
+            self.trial += 1
         
 
         return None
@@ -73,7 +76,9 @@ class LearningAgent(Agent):
         # waypoint is where we should be heading
         # inputs is the visual data, ex: {'light': 'green', 'oncoming': None, 'right': 'forward', 'left': 'forward'}
         
-        state = (waypoint, inputs['light'], inputs['right'], inputs['oncoming'], inputs['left'])
+        #state = (inputs['light'], inputs['right'], inputs['oncoming'], inputs['left']) #A+ safety, F reliability
+        #state = (inputs['light'], inputs['oncoming'], inputs['left']) #A+ safety, F reliability
+        state = (waypoint, inputs['light'], inputs['oncoming'], inputs['left'])
 
         return state
 
@@ -128,10 +133,12 @@ class LearningAgent(Agent):
             action = random.choice(self.valid_actions)
         
         else:
-            action = np.random.choice([
-                    random.choice(self.valid_actions), 
-                    max(self.Q[state], key=self.Q[state].get)], 
-                    p=[self.epsilon, 1- self.epsilon]
+            action = np.random.choice(
+                        [
+                            random.choice(self.valid_actions), 
+                            max(self.Q[state], key=self.Q[state].get)
+                        ], 
+                        p=[self.epsilon, 1 - self.epsilon]
                     )
 
         return action
@@ -186,7 +193,7 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
-    agent = env.create_agent(LearningAgent, learning=True)
+    agent = env.create_agent(LearningAgent, learning=True, alpha=0.5)
     
     ##############
     # Follow the driving agent
@@ -201,14 +208,14 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env, update_delay=0.001, log_metrics=True, display=False)
+    sim = Simulator(env, update_delay=0.001, log_metrics=True, display=False, optimized=True)
     
     ##############
     # Run the simulator
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test=10)
+    sim.run(n_test=10, tolerance=0.07)
 
 
 if __name__ == '__main__':
