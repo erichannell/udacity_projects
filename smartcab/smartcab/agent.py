@@ -47,8 +47,11 @@ class LearningAgent(Agent):
             self.alpha = 0
 
         else:
-            #self.epsilon -= 0.005
-            self.epsilon = 1/math.sqrt(self.trial)
+            #self.epsilon -= 0.05
+            #self.epsilon = 1/(math.sqrt(self.trial))
+            #self.epsilon = 1/(self.trial ** 2)
+            #self.epsilon = math.exp(-1*(0.5*self.trial))
+            self.epsilon -= 0.08 * self.epsilon
             self.trial += 1
         
 
@@ -133,14 +136,23 @@ class LearningAgent(Agent):
             action = random.choice(self.valid_actions)
         
         else:
+            # get a list of the top actions for a given state (there can be more than one)
+            optimal_action = [i for i in self.Q[state] if self.Q[state][max(self.Q[state], key=self.Q[state].get)] == self.Q[state][i]]
+            
+            if self.epsilon < 0:
+                self.epsilon = 0
+            print "epsilon:", self.epsilon
             action = np.random.choice(
-                        [
-                            random.choice(self.valid_actions), 
-                            max(self.Q[state], key=self.Q[state].get)
-                        ], 
-                        p=[self.epsilon, 1 - self.epsilon]
-                    )
-
+                     # generates a valid action, ex: 'right'
+                     [random.choice(self.valid_actions),
+                     # select a random optimal action for a given state
+                     random.choice(optimal_action)],
+                     # pick a value from the list, when epsilon is low p = [0,1] so will pick an optimal action from Q-table
+                     # but when epsilon is high we will likely pick a random action from the list of valid actions
+                     # this helps us explore and gives the Smartcab the chance to experience new states in the beginning.
+                     p=[self.epsilon, 1 - self.epsilon]
+                     )
+            print "picked action:", action
         return action
 
 
@@ -155,8 +167,9 @@ class LearningAgent(Agent):
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
 
+        #need to subtract the current (state, action) pair at the end.
         if self.learning:
-            self.Q[state][action] += self.alpha*reward
+            self.Q[state][action] += self.alpha * (reward - self.Q[state][action])
      
         return
 
@@ -193,7 +206,7 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
-    agent = env.create_agent(LearningAgent, learning=True, alpha=0.5)
+    agent = env.create_agent(LearningAgent, learning=True)
     
     ##############
     # Follow the driving agent
@@ -215,7 +228,7 @@ def run():
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test=10, tolerance=0.07)
+    sim.run(n_test=10, tolerance=0.001)
 
 
 if __name__ == '__main__':
