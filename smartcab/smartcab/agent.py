@@ -47,13 +47,14 @@ class LearningAgent(Agent):
             self.alpha = 0
 
         else:
-            #self.epsilon -= 0.05
-            #self.epsilon = 1/(math.sqrt(self.trial))
-            #self.epsilon = 1/(self.trial ** 2)
-            #self.epsilon = math.exp(-1*(0.5*self.trial))
-            self.epsilon -= 0.08 * self.epsilon
+            if self.trial < 20:
+                # force some exploration
+                self.epsilon = 1
+            else:                
+                #self.epsilon -= 0.05
+                self.epsilon -= self.alpha * self.epsilon
+            
             self.trial += 1
-        
 
         return None
 
@@ -79,8 +80,6 @@ class LearningAgent(Agent):
         # waypoint is where we should be heading
         # inputs is the visual data, ex: {'light': 'green', 'oncoming': None, 'right': 'forward', 'left': 'forward'}
         
-        #state = (inputs['light'], inputs['right'], inputs['oncoming'], inputs['left']) #A+ safety, F reliability
-        #state = (inputs['light'], inputs['oncoming'], inputs['left']) #A+ safety, F reliability
         state = (waypoint, inputs['light'], inputs['oncoming'], inputs['left'])
 
         return state
@@ -137,16 +136,18 @@ class LearningAgent(Agent):
         
         else:
             # get a list of the top actions for a given state (there can be more than one)
-            optimal_action = [i for i in self.Q[state] if self.Q[state][max(self.Q[state], key=self.Q[state].get)] == self.Q[state][i]]
+            max_Q = self.get_maxQ(state)
+            optimal_actions = [i for i in self.Q[state] if self.Q[state][i] == max_Q]
             
             if self.epsilon < 0:
+                #avoid negative probabilities if epsilon becomes negative:
                 self.epsilon = 0
             print "epsilon:", self.epsilon
             action = np.random.choice(
                      # generates a valid action, ex: 'right'
                      [random.choice(self.valid_actions),
                      # select a random optimal action for a given state
-                     random.choice(optimal_action)],
+                     random.choice(optimal_actions)],
                      # pick a value from the list, when epsilon is low p = [0,1] so will pick an optimal action from Q-table
                      # but when epsilon is high we will likely pick a random action from the list of valid actions
                      # this helps us explore and gives the Smartcab the chance to experience new states in the beginning.
@@ -206,7 +207,7 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
-    agent = env.create_agent(LearningAgent, learning=True)
+    agent = env.create_agent(LearningAgent, epsilon=1, alpha=0.05, learning=True)
     
     ##############
     # Follow the driving agent
