@@ -1,45 +1,53 @@
 # Machine Learning Engineer Nanodegree
 ## Capstone Proposal
 Eric Hannell
-December 4th, 2017
+
+December 1st, 2017
 
 ## Proposal
 Pricing items correctly in marketplaces is difficult. Too high and the seller never sells the item, too low and they leave money on the table. In this project I intend to tackle the [Mercari Kaggle competition](https://www.kaggle.com/c/mercari-price-suggestion-challenge) which aims to *"build an algorithm that automatically suggests the right product prices."* To create the model we are given user-inputted `text descriptions` of products, including details like `product category name`, `brand name`, and `item condition`.
 
 ### Domain Background
-_(approx. 1-2 paragraphs)_
+*"[Mercari](https://www.mercari.com/) is the biggest community-powered shopping app from Japan, for anyone to buy and sell anything, from anywhere, in seconds."* Helping users correctly price their items will create a better marketplace, happier users, and a more sucessful business. The aim is to predict prices by using real data from listings such as: user-inputted text descriptions of their products, product category name, brand name, and item condition. These features can be helpful in predicting the price but you can also derive other features such as key words in the product description.
 
-*"[Mercari](https://www.mercari.com/) is the biggest community-powered shopping app from Japan, for anyone to buy and sell anything, from anywhere, in seconds."* Helping users correctly price their items will lead them to a better marketplace, happier users, and a more sucessful business.
-
-In this section, provide brief details on the background information of the domain from which the project is proposed. Historical information relevant to the project should be included. It should be clear how or why a problem in the domain can or should be solved. Related academic research should be appropriately cited in this section, including why that research is relevant. Additionally, a discussion of your personal motivation for investigating a particular problem in the domain is encouraged but not required.
+I am personally interested in this Kaggle challenge since I have never completed a Kaggle competition and would like to see how I rank against others. The data also lends itself to different kinds of analysis and I would like to compare a few methods that I have learned during the nanodegree. 
 
 ### Problem Statement
-_(approx. 1 paragraph)_
-
-In this section, clearly describe the problem that is to be solved. The problem described should be well defined and should have at least one relevant potential solution. Additionally, describe the problem thoroughly such that it is clear that the problem is quantifiable (the problem can be expressed in mathematical or logical terms) , measurable (the problem can be measured by some metric and clearly observed), and replicable (the problem can be reproduced and occurs more than once).
+For a given listing of a product we are trying to predict the price given past examples of prices for products. Since price is a a continuous variable we are going to be doing regression. We can use the features we are given and also engineer new ones. For example, there is a lot of information captured in the text input from the users (`name` and `item_description`). I will try an approach that only uses categorical features and then another that also uses the free-text features.
 
 ### Datasets and Inputs
-_(approx. 2-3 paragraphs)_
+Free-text Features:
+* `name` - the title of the listing
+* `item_description` - the full description of the item
 
-In this section, the dataset(s) and/or input(s) being considered for the project should be thoroughly described, such as how they relate to the problem and why they should be used. Information such as how the dataset or input is (was) obtained, and the characteristics of the dataset or input, should be included with relevant references and citations as necessary It should be clear how the dataset(s) or input(s) will be used in the project and whether their use is appropriate given the context of the problem.
+Categorical features:
+* `brand_name` - the brand of the product
+* `category_name` - category of the listing
+* `shipping` - 1 if shipping fee is paid by seller and 0 by buyer
+* `item_condition_id` - provided by the seller (1 - New, 2 - Like New, 3 - Good, 4 - Fair, 5 - Poor)
+
+Target variable:
+* `price` - the USD price that the item was sold for
+
+All of the features contain information that is relevant to the price, however the free-text fields contain information that is harder to extract and need to be processed before they can be used. I will use word embeddings which represents words using dense vectors (instead of sparse vectors like in a [bag of words model](https://www.wikiwand.com/en/Bag-of-words_model)). Using word embeddings takes into consideration the placement of the word in the sequence of words in a sentence (which is ignored in a simple bag of words model). With Keras we will basically turns words into integers, so a sentence like "great iPhone, barely used" would turn into a vector like [17, 8, 33, 4] which can be used in a neural network as an [Embedding](https://keras.io/layers/embeddings/#embedding) layer.
 
 ### Solution Statement
-_(approx. 1 paragraph)_
+I want to compare a simple model to a complex one so I will create two models to solve this problem:
 
-In this section, clearly describe a solution to the problem. The solution should be applicable to the project domain and appropriate for the dataset(s) or input(s) given. Additionally, describe the solution thoroughly such that it is clear that the solution is quantifiable (the solution can be expressed in mathematical or logical terms) , measurable (the solution can be measured by some metric and clearly observed), and replicable (the solution can be reproduced and occurs more than once).
+- First a simple solution which disregards the free-text features and only uses `brand_name`, `category_name`, `shipping` and `item_condition_id`. I will use a [decision tree regressor](http://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeRegressor.html) for this.
+
+- Second, a neural network which uses all of the features (including the `name` and `item_description` text fields).
 
 ### Benchmark Model
-_(approximately 1-2 paragraphs)_
-
-In this section, provide the details for a benchmark model or result that relates to the domain, problem statement, and intended solution. Ideally, the benchmark model or result contextualizes existing methods or known information in the domain and problem given, which could then be objectively compared to the solution. Describe how the benchmark model or result is measurable (can be measured by some metric and clearly observed) with thorough detail.
+I will compare their performance against a baseline model which, given a listing, simply predicts the price based on the median price for all listings with the same `brand_name`, `category_name`, `shipping` and `item_condition_id` values. A simpler model would be to take the mean of all items and use that value for all predictions, but that seems too naive. Other alternatives would be the mean price, but there are outliers so I prefer to use the median.
 
 ### Evaluation Metrics
-_(approx. 1-2 paragraphs)_
+Each model will be tested against the [test set data](https://www.kaggle.com/c/mercari-price-suggestion-challenge/data) that is provided in the Kaggle challenge and I will evaluate the results by using [mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error).
 
-In this section, propose at least one evaluation metric that can be used to quantify the performance of both the benchmark model and the solution model. The evaluation metric(s) you propose should be appropriate given the context of the data, the problem statement, and the intended solution. Describe how the evaluation metric(s) are derived and provide an example of their mathematical representations (if applicable). Complex evaluation metrics should be clearly defined and quantifiable (can be expressed in mathematical or logical terms).
+For the decision tree regressor you can use [mean squared error](http://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_squared_error.html#sklearn.metrics.mean_squared_error) as a regression loss metric. The performance metric for the Keras model will also be [mean squared error](https://keras.io/losses/#mean_squared_error) which is specified when you compile the model.
 
 ### Project Design
-_(approx. 1 page)_
+First I will create the simple decision tree regressor. To do this I will 
 
 In this final section, summarize a theoretical workflow for approaching a solution given the problem. Provide thorough discussion for what strategies you may consider employing, what analysis of the data might be required before being used, or which algorithms will be considered for your implementation. The workflow and discussion that you provide should align with the qualities of the previous sections. Additionally, you are encouraged to include small visualizations, pseudocode, or diagrams to aid in describing the project design, but it is not required. The discussion should clearly outline your intended workflow of the capstone project.
 
